@@ -1,0 +1,41 @@
+function HeartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 21s-7.4-4.4-9.5-9.1C1 8.5 2.8 5 6.5 5c2.1 0 3.5 1.1 4.4 2.4C11.8 6.1 13.2 5 15.3 5 19 5 21 8.5 19.4 11.9 17.4 16.6 12 21 12 21Z" />
+    </svg>
+  );
+}
+
+function ImageCard({ item, onToggleFavorite }) {
+  return (
+    <article className={`photo-card ${item.favorite ? "is-favorite" : ""}`}>
+      <div className={`image-frame ${item.size || "landscape"}`}>
+        <img src={item.src} alt={item.alt} loading="lazy" />
+
+        <div className="card-overlay">
+          <span className="category-pill">{item.category}</span>
+          <button
+            className="favorite-button"
+            type="button"
+            onClick={() => onToggleFavorite(item.id)}
+            aria-label={
+              item.favorite
+                ? `Remove ${item.title} from favorites`
+                : `Add ${item.title} to favorites`
+            }
+            aria-pressed={item.favorite}
+          >
+            <HeartIcon />
+          </button>
+        </div>
+      </div>
+
+      <div className="card-body">
+        <p>Captured {item.time}</p>
+        <span className="card-dot" aria-hidden="true" />
+      </div>
+    </article>
+  );
+}
+
+export default ImageCard;
