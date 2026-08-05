@@ -5,6 +5,7 @@ import AnimatedBackground from "./components/AnimatedBackground";
 import FilterBar from "./components/FilterBar";
 import Gallery from "./components/Gallery";
 import Footer from "./components/Footer";
+import UploadModal from "./components/UploadModal";
 
 const categories = [
   "All",
@@ -212,6 +213,35 @@ const initialGalleryItems = [
   },
 ];
 
+const uploadCategories = categories.filter((category) => category !== "All");
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+
+const monthFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+});
+
+const timeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+function toTitleCase(value) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function cleanFileName(fileName) {
+  return fileName.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
+}
+
 function groupItemsBySection(items) {
   return items.reduce((sections, item) => {
     let sectionGroup = sections.find((group) => group.section === item.section);
@@ -239,6 +269,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [theme, setTheme] = useState("dark");
   const [showFavorites, setShowFavorites] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const favoriteCount = useMemo(
     () => galleryItems.filter((item) => item.favorite).length,
@@ -284,6 +315,50 @@ function App() {
     setShowFavorites(false);
   }
 
+  function handleOpenUploadModal() {
+    setIsUploadModalOpen(true);
+  }
+
+  function handleCloseUploadModal() {
+    setIsUploadModalOpen(false);
+  }
+
+  function handleUploadFiles({ files, name, category, date }) {
+    const now = new Date();
+    const selectedDate = date ? new Date(`${date}T12:00:00`) : now;
+    const normalizedDate = Number.isNaN(selectedDate.getTime()) ? now : selectedDate;
+    const titleBase = cleanFileName(name?.trim() || "");
+    const resolvedCategory = category || "Screenshots";
+    const dateLabel = dateFormatter.format(normalizedDate);
+    const monthLabel = monthFormatter.format(normalizedDate);
+    const timeLabel = timeFormatter.format(normalizedDate);
+
+    setGalleryItems((currentItems) => {
+      const newItems = files.map((file, index) => {
+        const fallbackTitle = toTitleCase(
+          cleanFileName(file.name) || "Uploaded photo",
+        );
+        const itemTitle = titleBase || fallbackTitle;
+
+        return {
+          id: Date.now() + index + currentItems.length + 1,
+          title: itemTitle,
+          category: resolvedCategory,
+          date: dateLabel,
+          time: timeLabel,
+          section: monthLabel,
+          src: URL.createObjectURL(file),
+          alt: itemTitle,
+          favorite: false,
+          size: "landscape",
+        };
+      });
+
+      return [...newItems, ...currentItems];
+    });
+    setIsUploadModalOpen(false);
+  }
+
   return (
     <div className="app-shell" data-theme={theme}>
       <AnimatedBackground theme={theme} />
@@ -293,6 +368,7 @@ function App() {
         onSearchChange={setSearchQuery}
         theme={theme}
         onThemeToggle={handleThemeToggle}
+        onAddClick={handleOpenUploadModal}
         visibleCount={filteredItems.length}
         totalCount={galleryItems.length}
       />
@@ -339,6 +415,14 @@ function App() {
           onClearFilters={handleClearFilters}
         />
       </main>
+
+      <UploadModal
+        open={isUploadModalOpen}
+        theme={theme}
+        categories={uploadCategories}
+        onClose={handleCloseUploadModal}
+        onUpload={handleUploadFiles}
+      />
 
       <Footer />
     </div>

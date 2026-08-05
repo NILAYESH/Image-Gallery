@@ -28,6 +28,7 @@ function Navbar({
   onSearchChange,
   theme,
   onThemeToggle,
+  onAddClick,
   visibleCount,
   totalCount,
 }) {
@@ -64,7 +65,12 @@ function Navbar({
       </label>
 
       <div className="navbar-actions">
-        <button className="icon-button" type="button" aria-label="Add photo">
+        <button
+          className="icon-button"
+          type="button"
+          onClick={onAddClick}
+          aria-label="Add photo"
+        >
           <PlusIcon />
         </button>
 
