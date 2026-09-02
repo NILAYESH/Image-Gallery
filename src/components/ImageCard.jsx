@@ -13,7 +13,6 @@ function ImageCard({ item, onToggleFavorite }) {
         <img src={item.src} alt={item.alt} loading="lazy" />
 
         <div className="card-overlay">
-          <span className="category-pill">{item.category}</span>
           <button
             className="favorite-button"
             type="button"

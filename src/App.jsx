@@ -1,28 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import "./App.css";
 import Navbar from "./components/Navbar";
-import AnimatedBackground from "./components/AnimatedBackground";
-import FilterBar from "./components/FilterBar";
 import Gallery from "./components/Gallery";
-import Footer from "./components/Footer";
-import UploadModal from "./components/UploadModal";
-
-const categories = [
-  "All",
-  "Nature",
-  "Travel",
-  "Food",
-  "Animals",
-  "People",
-  "Documents",
-  "Screenshots",
-];
 
 const initialGalleryItems = [
   {
     id: 1,
     title: "Mountain Morning",
-    category: "Nature",
     date: "Thu, Jul 30",
     time: "7:58 PM",
     section: "July",
@@ -34,7 +18,6 @@ const initialGalleryItems = [
   {
     id: 2,
     title: "Forest Walk",
-    category: "Nature",
     date: "Thu, Jul 30",
     time: "8:24 PM",
     section: "July",
@@ -46,7 +29,6 @@ const initialGalleryItems = [
   {
     id: 3,
     title: "Kyoto Evening",
-    category: "Travel",
     date: "Tue, Jul 28",
     time: "6:12 PM",
     section: "July",
@@ -58,7 +40,6 @@ const initialGalleryItems = [
   {
     id: 4,
     title: "Coastal Highway",
-    category: "Travel",
     date: "Tue, Jul 28",
     time: "5:47 PM",
     section: "July",
@@ -70,7 +51,6 @@ const initialGalleryItems = [
   {
     id: 5,
     title: "Brunch Table",
-    category: "Food",
     date: "Sun, Jul 19",
     time: "11:18 AM",
     section: "July",
@@ -82,7 +62,6 @@ const initialGalleryItems = [
   {
     id: 6,
     title: "Coffee Notes",
-    category: "Food",
     date: "Sun, Jul 19",
     time: "9:36 AM",
     section: "July",
@@ -91,129 +70,7 @@ const initialGalleryItems = [
     favorite: true,
     size: "square",
   },
-  {
-    id: 7,
-    title: "Golden Hour Pup",
-    category: "Animals",
-    date: "Fri, Jul 17",
-    time: "6:44 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=900&q=80",
-    alt: "Golden retriever sitting in a grassy field",
-    favorite: false,
-    size: "portrait",
-  },
-  {
-    id: 8,
-    title: "Window Cat",
-    category: "Animals",
-    date: "Fri, Jul 17",
-    time: "4:09 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=900&q=80",
-    alt: "Cat resting near a bright window",
-    favorite: true,
-    size: "square",
-  },
-  {
-    id: 9,
-    title: "Studio Portrait",
-    category: "People",
-    date: "Mon, Jul 13",
-    time: "2:31 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80",
-    alt: "Portrait of a smiling person in soft light",
-    favorite: false,
-    size: "portrait",
-  },
-  {
-    id: 10,
-    title: "Friends Downtown",
-    category: "People",
-    date: "Mon, Jul 13",
-    time: "7:05 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80",
-    alt: "Friends laughing together outdoors",
-    favorite: false,
-    size: "landscape",
-  },
-  {
-    id: 11,
-    title: "Research Notes",
-    category: "Documents",
-    date: "Fri, Jul 10",
-    time: "10:14 AM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=900&q=80",
-    alt: "Paperwork and notes spread across a desk",
-    favorite: true,
-    size: "landscape",
-  },
-  {
-    id: 12,
-    title: "Project Brief",
-    category: "Documents",
-    date: "Fri, Jul 10",
-    time: "3:22 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=900&q=80",
-    alt: "Documents and charts organized on a desk",
-    favorite: false,
-    size: "square",
-  },
-  {
-    id: 13,
-    title: "Analytics Capture",
-    category: "Screenshots",
-    date: "Wed, Jul 8",
-    time: "1:48 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80",
-    alt: "Laptop screen showing analytics charts",
-    favorite: false,
-    size: "wide",
-  },
-  {
-    id: 14,
-    title: "Interface Draft",
-    category: "Screenshots",
-    date: "Wed, Jul 8",
-    time: "4:57 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80",
-    alt: "Laptop displaying a clean interface layout",
-    favorite: true,
-    size: "landscape",
-  },
-  {
-    id: 15,
-    title: "Desert Vista",
-    category: "Nature",
-    date: "Sat, Jun 27",
-    time: "6:29 AM",
-    section: "June",
-    src: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=900&q=80",
-    alt: "Desert landscape under a clear sky",
-    favorite: false,
-    size: "wide",
-  },
-  {
-    id: 16,
-    title: "Station Platform",
-    category: "Travel",
-    date: "Thu, Jun 18",
-    time: "8:16 PM",
-    section: "June",
-    src: "https://i.pinimg.com/736x/98/aa/c5/98aac5ee632470b5184955350e90d12b.jpg",
-    alt: "Train platform prepared for evening travel",
-    favorite: false,
-    size: "portrait",
-  },
 ];
-
-const uploadCategories = categories.filter((category) => category !== "All");
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
@@ -265,11 +122,8 @@ function groupItemsBySection(items) {
 
 function App() {
   const [galleryItems, setGalleryItems] = useState(initialGalleryItems);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [theme, setTheme] = useState("dark");
   const [showFavorites, setShowFavorites] = useState(false);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const fileInputRef = useRef(null);
 
   const favoriteCount = useMemo(
     () => galleryItems.filter((item) => item.favorite).length,
@@ -277,20 +131,11 @@ function App() {
   );
 
   const filteredItems = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
     return galleryItems.filter((item) => {
-      const matchesCategory =
-        selectedCategory === "All" || item.category === selectedCategory;
       const matchesFavorites = !showFavorites || item.favorite;
-      const searchableText = `${item.title} ${item.category} ${item.date} ${item.section}`;
-      const matchesSearch = searchableText
-        .toLowerCase()
-        .includes(normalizedQuery);
-
-      return matchesCategory && matchesFavorites && matchesSearch;
+      return matchesFavorites;
     });
-  }, [galleryItems, searchQuery, selectedCategory, showFavorites]);
+  }, [galleryItems, showFavorites]);
 
   const groupedGallery = useMemo(
     () => groupItemsBySection(filteredItems),
@@ -305,50 +150,42 @@ function App() {
     );
   }
 
-  function handleThemeToggle() {
-    setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
-  }
-
   function handleClearFilters() {
-    setSearchQuery("");
-    setSelectedCategory("All");
     setShowFavorites(false);
   }
 
-  function handleOpenUploadModal() {
-    setIsUploadModalOpen(true);
+  function handleOpenFilePicker() {
+    fileInputRef.current?.click();
   }
 
-  function handleCloseUploadModal() {
-    setIsUploadModalOpen(false);
-  }
+  function handleUploadFiles(fileList) {
+    const files = Array.from(fileList).filter((file) =>
+      file.type.startsWith("image/"),
+    );
 
-  function handleUploadFiles({ files, name, category, date }) {
+    if (files.length === 0) {
+      return;
+    }
+
     const now = new Date();
-    const selectedDate = date ? new Date(`${date}T12:00:00`) : now;
-    const normalizedDate = Number.isNaN(selectedDate.getTime()) ? now : selectedDate;
-    const titleBase = cleanFileName(name?.trim() || "");
-    const resolvedCategory = category || "Screenshots";
-    const dateLabel = dateFormatter.format(normalizedDate);
-    const monthLabel = monthFormatter.format(normalizedDate);
-    const timeLabel = timeFormatter.format(normalizedDate);
+    const dateLabel = dateFormatter.format(now);
+    const monthLabel = monthFormatter.format(now);
+    const timeLabel = timeFormatter.format(now);
 
     setGalleryItems((currentItems) => {
       const newItems = files.map((file, index) => {
         const fallbackTitle = toTitleCase(
           cleanFileName(file.name) || "Uploaded photo",
         );
-        const itemTitle = titleBase || fallbackTitle;
 
         return {
           id: Date.now() + index + currentItems.length + 1,
-          title: itemTitle,
-          category: resolvedCategory,
+          title: fallbackTitle,
           date: dateLabel,
           time: timeLabel,
           section: monthLabel,
           src: URL.createObjectURL(file),
-          alt: itemTitle,
+          alt: fallbackTitle,
           favorite: false,
           size: "landscape",
         };
@@ -356,21 +193,20 @@ function App() {
 
       return [...newItems, ...currentItems];
     });
-    setIsUploadModalOpen(false);
+  }
+
+  function handleFileChange(event) {
+    handleUploadFiles(event.target.files);
+    event.target.value = "";
   }
 
   return (
-    <div className="app-shell" data-theme={theme}>
-      <AnimatedBackground theme={theme} />
-
+    <div className="app-shell">
       <Navbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        theme={theme}
-        onThemeToggle={handleThemeToggle}
-        onAddClick={handleOpenUploadModal}
-        visibleCount={filteredItems.length}
-        totalCount={galleryItems.length}
+        onAddClick={handleOpenFilePicker}
+        showFavorites={showFavorites}
+        onFavoritesToggle={() => setShowFavorites((current) => !current)}
+        favoriteCount={favoriteCount}
       />
 
       <main className="gallery-dashboard">
@@ -400,15 +236,6 @@ function App() {
           </div>
         </section>
 
-        <FilterBar
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
-          showFavorites={showFavorites}
-          onFavoritesToggle={() => setShowFavorites((current) => !current)}
-          favoriteCount={favoriteCount}
-        />
-
         <Gallery
           groupedGallery={groupedGallery}
           onToggleFavorite={handleToggleFavorite}
@@ -416,15 +243,18 @@ function App() {
         />
       </main>
 
-      <UploadModal
-        open={isUploadModalOpen}
-        theme={theme}
-        categories={uploadCategories}
-        onClose={handleCloseUploadModal}
-        onUpload={handleUploadFiles}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={handleFileChange}
       />
 
-      <Footer />
+      <footer className="site-footer">
+        <p>(c) 2026 Photo Gallery. Student React project.</p>
+      </footer>
     </div>
   );
 }
