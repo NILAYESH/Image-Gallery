@@ -1,18 +1,63 @@
-# React + Vite
+# Image Gallery
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A minimal React + Vite photo gallery app.
 
-Currently, two official plugins are available:
+This repository contains a small image gallery built with React and Vite. It includes basic ESLint configuration and the scripts to run, build, and lint the project.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech stack
 
-## React Compiler
+- React 19
+- Vite
+- ESLint
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Available scripts
 
-## Expanding the ESLint configuration
+Run these from the project root:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-"# Image-Gallery" 
-"# Image-Gallery" 
+- npm install — install dependencies
+- npm run dev — start the dev server (Vite + HMR)
+- npm run build — build production bundles
+- npm run preview — locally preview the production build
+- npm run lint — run ESLint
+
+These scripts are defined in package.json.
+
+## Getting started
+
+1. Clone the repo
+
+   git clone https://github.com/NILAYESH/Image-Gallery.git
+   cd Image-Gallery
+
+2. Install dependencies
+
+   npm install
+
+3. Start the development server
+
+   npm run dev
+
+Open http://localhost:5173 (or the port shown by Vite) in your browser.
+
+## Project structure (typical)
+
+- index.html
+- src/
+  - main.jsx — app entry
+  - App.jsx — root component
+  - components/ — React components
+  - assets/ — images and static assets
+- public/ — static files (if used)
+- package.json
+
+Adjust paths or filenames depending on the exact layout in this repo.
+
+## ESLint
+
+Project includes ESLint dev-dependencies. Run `npm run lint` to check code style. For a production app consider enabling type-aware rules with TypeScript.
+
+## Notes
+
+- The project uses React + Vite (see package.json for exact versions).
+- Update this README with features, screenshots, or usage examples specific to your app.
+
