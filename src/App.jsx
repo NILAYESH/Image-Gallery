@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import Navbar from "./components/Navbar";
 import Gallery from "./components/Gallery";
+import Login from "./pages/Login";
 
 const initialGalleryItems = [
   {
@@ -120,7 +121,7 @@ function groupItemsBySection(items) {
   }, []);
 }
 
-function App() {
+function GalleryPage() {
   const [galleryItems, setGalleryItems] = useState(initialGalleryItems);
   const [showFavorites, setShowFavorites] = useState(false);
   const fileInputRef = useRef(null);
@@ -257,6 +258,34 @@ function App() {
       </footer>
     </div>
   );
+}
+
+function App() {
+  const [path, setPath] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    function handlePopState() {
+      setPath(window.location.pathname);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  function navigate(nextPath) {
+    window.history.pushState({}, "", nextPath);
+    setPath(nextPath);
+  }
+
+  if (path === "/" || path === "/login") {
+    return <Login onLoginSuccess={() => navigate("/gallery")} />;
+  }
+
+  if (path === "/gallery") {
+    return <GalleryPage />;
+  }
+
+  return <Login onLoginSuccess={() => navigate("/gallery")} />;
 }
 
 export default App;
