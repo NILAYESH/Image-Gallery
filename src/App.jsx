@@ -3,6 +3,7 @@ import "./App.css";
 import Navbar from "./components/Navbar";
 import Gallery from "./components/Gallery";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 
 const initialGalleryItems = [
   {
@@ -262,6 +263,7 @@ function GalleryPage() {
 
 function App() {
   const [path, setPath] = useState(() => window.location.pathname);
+  const [accountCreated, setAccountCreated] = useState(false);
 
   useEffect(() => {
     function handlePopState() {
@@ -278,14 +280,40 @@ function App() {
   }
 
   if (path === "/" || path === "/login") {
-    return <Login onLoginSuccess={() => navigate("/gallery")} />;
+    return (
+      <Login
+        onLoginSuccess={() => navigate("/gallery")}
+        onSignup={() => navigate("/signup")}
+        accountCreated={accountCreated}
+        onAccountCreatedAlert={() => setAccountCreated(false)}
+      />
+    );
+  }
+
+  if (path === "/signup") {
+    return (
+      <Signup
+        onLogin={() => navigate("/login")}
+        onAccountCreated={() => {
+          setAccountCreated(true);
+          navigate("/login");
+        }}
+      />
+    );
   }
 
   if (path === "/gallery") {
     return <GalleryPage />;
   }
 
-  return <Login onLoginSuccess={() => navigate("/gallery")} />;
+  return (
+    <Login
+      onLoginSuccess={() => navigate("/gallery")}
+      onSignup={() => navigate("/signup")}
+      accountCreated={accountCreated}
+      onAccountCreatedAlert={() => setAccountCreated(false)}
+    />
+  );
 }
 
 export default App;

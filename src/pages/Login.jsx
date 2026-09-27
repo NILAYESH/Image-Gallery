@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function EyeIcon({ hidden }) {
   return hidden ? (
@@ -12,13 +12,27 @@ function EyeIcon({ hidden }) {
   );
 }
 
-function Login({ onLoginSuccess }) {
+function Login({
+  onLoginSuccess,
+  onSignup,
+  accountCreated,
+  onAccountCreatedAlert,
+}) {
   const [identity, setIdentity] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const accountCreatedAlertShown = useRef(false);
+
+  useEffect(() => {
+    if (!accountCreated || accountCreatedAlertShown.current) return;
+
+    accountCreatedAlertShown.current = true;
+    window.alert("Account Created");
+    onAccountCreatedAlert();
+  }, [accountCreated, onAccountCreatedAlert]);
 
   function validate() {
     const nextErrors = {};
@@ -164,11 +178,12 @@ function Login({ onLoginSuccess }) {
         </form>
 
         <p className="login-signup">
-          New here? <button type="button">Create an account</button>
+          New here? <button type="button" onClick={onSignup}>Create an account</button>
         </p>
       </section>
     </main>
   );
 }
 
+export { EyeIcon };
 export default Login;
