@@ -1,3 +1,4 @@
+// Signup: client account creation screen that keeps the original sign-up flow separate from the admin flow.
 import { useState } from "react";
 import { EyeIcon } from "./Login";
 
@@ -23,7 +24,12 @@ function Signup({ onLogin, onAccountCreated }) {
 
       <header className="login-header">
         <div className="login-brand">
-          <span className="login-brand-mark">PG</span>
+          <img
+            className="login-brand-mark"
+            src="/Icon-gallery.svg"
+            alt=""
+            aria-hidden="true"
+          />
           <strong>Photo Gallery</strong>
         </div>
       </header>
@@ -56,18 +62,6 @@ function Signup({ onLogin, onAccountCreated }) {
               type="email"
               placeholder="Enter your email"
               autoComplete="email"
-              required
-            />
-          </div>
-
-          <div className="login-field">
-            <label htmlFor="signup-username">Username</label>
-            <input
-              id="signup-username"
-              name="username"
-              type="text"
-              placeholder="Choose a username"
-              autoComplete="username"
               required
             />
           </div>

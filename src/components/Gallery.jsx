@@ -1,11 +1,12 @@
+// Gallery: groups and renders the collection of media cards by date/section for the main library view.
 import ImageCard from "./ImageCard";
 
-function Gallery({ groupedGallery, onToggleFavorite, onClearFilters }) {
+function Gallery({ groupedGallery, onToggleFavorite, onClearFilters, onDeleteMedia }) {
   if (groupedGallery.length === 0) {
     return (
       <section className="empty-state" aria-live="polite">
         <p className="eyebrow">No Matches</p>
-        <h2>No photos found</h2>
+        <h2>No media found</h2>
         <p>No saved moments match the current view.</p>
         <button type="button" onClick={onClearFilters}>
           Clear filters
@@ -25,7 +26,7 @@ function Gallery({ groupedGallery, onToggleFavorite, onClearFilters }) {
                 (total, dateGroup) => total + dateGroup.items.length,
                 0,
               )}{" "}
-              photos
+              items
             </span>
           </div>
 
@@ -42,6 +43,7 @@ function Gallery({ groupedGallery, onToggleFavorite, onClearFilters }) {
                     key={item.id}
                     item={item}
                     onToggleFavorite={onToggleFavorite}
+                    onDeleteMedia={onDeleteMedia}
                   />
                 ))}
               </div>

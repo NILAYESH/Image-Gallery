@@ -1,3 +1,4 @@
+// Login: client authentication screen for returning users, with validation, password toggle, and client-login flow.
 import { useEffect, useRef, useState } from "react";
 
 function EyeIcon({ hidden }) {
@@ -15,6 +16,7 @@ function EyeIcon({ hidden }) {
 function Login({
   onLoginSuccess,
   onSignup,
+  onAdminLogin,
   accountCreated,
   onAccountCreatedAlert,
 }) {
@@ -25,6 +27,7 @@ function Login({
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const accountCreatedAlertShown = useRef(false);
+  const rememberMeAlertShown = useRef(false);
 
   useEffect(() => {
     if (!accountCreated || accountCreatedAlertShown.current) return;
@@ -82,15 +85,37 @@ function Login({
     setErrors((current) => ({ ...current, password: "", credentials: "" }));
   }
 
+  function handleRememberMeChange(event) {
+    const checked = event.target.checked;
+    setRememberMe(checked);
+
+    if (checked && !rememberMeAlertShown.current) {
+      rememberMeAlertShown.current = true;
+      window.alert("The Remember Me feature will be available in the next update.");
+    }
+  }
+
   return (
     <main className="login-page" aria-labelledby="login-title">
       <div className="login-background" aria-hidden="true" />
 
       <header className="login-header">
         <div className="login-brand">
-          <span className="login-brand-mark">PG</span>
+          <img
+            className="login-brand-mark"
+            src="/Icon-gallery.svg"
+            alt=""
+            aria-hidden="true"
+          />
           <strong>Photo Gallery</strong>
         </div>
+        <button
+          className="login-admin-link"
+          type="button"
+          onClick={onAdminLogin}
+        >
+          Admin Login
+        </button>
       </header>
 
       <section className="login-card">
@@ -157,11 +182,19 @@ function Login({
               <input
                 type="checkbox"
                 checked={rememberMe}
-                onChange={(event) => setRememberMe(event.target.checked)}
+                onChange={handleRememberMeChange}
               />
               <span>Remember me</span>
             </label>
-            <button className="login-link" type="button">
+            <button
+              className="login-link"
+              type="button"
+              onClick={() =>
+                window.alert(
+                  "The Forgot Password feature will be available in the next update.\nPlease try to remember your password 🫡",
+                )
+              }
+            >
               Forgot password?
             </button>
           </div>

@@ -1,9 +1,12 @@
+// App route shell: decides which page to render for the current URL and preserves the client/gallery flow.
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import Navbar from "./components/Navbar";
 import Gallery from "./components/Gallery";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import AdminLogin from "./pages/AdminLogin";
+import Admin from "./pages/Admin";
 
 const initialGalleryItems = [
   {
@@ -122,9 +125,11 @@ function groupItemsBySection(items) {
   }, []);
 }
 
-function GalleryPage() {
+function GalleryPage({ onLogout }) {
   const [galleryItems, setGalleryItems] = useState(initialGalleryItems);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [mediaToDelete, setMediaToDelete] = useState(null);
+  const cancelDeleteRef = useRef(null);
   const fileInputRef = useRef(null);
 
   const favoriteCount = useMemo(
@@ -138,6 +143,20 @@ function GalleryPage() {
       return matchesFavorites;
     });
   }, [galleryItems, showFavorites]);
+
+  useEffect(() => {
+    if (!mediaToDelete) return undefined;
+
+    cancelDeleteRef.current?.focus();
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setMediaToDelete(null);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mediaToDelete]);
 
   const groupedGallery = useMemo(
     () => groupItemsBySection(filteredItems),
@@ -156,13 +175,26 @@ function GalleryPage() {
     setShowFavorites(false);
   }
 
+  function confirmDeleteMedia() {
+    if (!mediaToDelete) return;
+
+    setGalleryItems((currentItems) =>
+      currentItems.filter((item) => item.id !== mediaToDelete.id),
+    );
+    setMediaToDelete(null);
+  }
+
+  function handleDeleteMedia(mediaId, mediaTitle) {
+    setMediaToDelete({ id: mediaId, title: mediaTitle });
+  }
+
   function handleOpenFilePicker() {
     fileInputRef.current?.click();
   }
 
   function handleUploadFiles(fileList) {
     const files = Array.from(fileList).filter((file) =>
-      file.type.startsWith("image/"),
+      file.type.startsWith("image/") || file.type.startsWith("video/"),
     );
 
     if (files.length === 0) {
@@ -176,8 +208,9 @@ function GalleryPage() {
 
     setGalleryItems((currentItems) => {
       const newItems = files.map((file, index) => {
+        const mediaType = file.type.startsWith("video/") ? "video" : "image";
         const fallbackTitle = toTitleCase(
-          cleanFileName(file.name) || "Uploaded photo",
+          cleanFileName(file.name) || `Uploaded ${mediaType}`,
         );
 
         return {
@@ -188,6 +221,7 @@ function GalleryPage() {
           section: monthLabel,
           src: URL.createObjectURL(file),
           alt: fallbackTitle,
+          mediaType,
           favorite: false,
           size: "landscape",
         };
@@ -209,6 +243,7 @@ function GalleryPage() {
         showFavorites={showFavorites}
         onFavoritesToggle={() => setShowFavorites((current) => !current)}
         favoriteCount={favoriteCount}
+        onLogout={onLogout}
       />
 
       <main className="gallery-dashboard">
@@ -225,7 +260,7 @@ function GalleryPage() {
           <div className="library-stats" aria-label="Gallery summary">
             <span>
               <strong>{galleryItems.length}</strong>
-              Photos
+              Media
             </span>
             <span>
               <strong>{favoriteCount}</strong>
@@ -242,13 +277,53 @@ function GalleryPage() {
           groupedGallery={groupedGallery}
           onToggleFavorite={handleToggleFavorite}
           onClearFilters={handleClearFilters}
+          onDeleteMedia={handleDeleteMedia}
         />
       </main>
+
+      {mediaToDelete && (
+        <div
+          className="admin-dialog-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setMediaToDelete(null);
+          }}
+        >
+          <section
+            className="admin-confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-media-title"
+            aria-describedby="delete-media-description"
+          >
+            <h2 id="delete-media-title">Delete this media?</h2>
+            <p id="delete-media-description">
+              {mediaToDelete.title} will be removed from your library.
+            </p>
+            <div className="admin-dialog-actions">
+              <button
+                ref={cancelDeleteRef}
+                className="admin-cancel-button"
+                type="button"
+                onClick={() => setMediaToDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="admin-confirm-delete-button"
+                type="button"
+                onClick={confirmDeleteMedia}
+              >
+                Delete
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
         hidden
         onChange={handleFileChange}
@@ -284,6 +359,7 @@ function App() {
       <Login
         onLoginSuccess={() => navigate("/gallery")}
         onSignup={() => navigate("/signup")}
+        onAdminLogin={() => navigate("/admin/login")}
         accountCreated={accountCreated}
         onAccountCreatedAlert={() => setAccountCreated(false)}
       />
@@ -303,13 +379,27 @@ function App() {
   }
 
   if (path === "/gallery") {
-    return <GalleryPage />;
+    return <GalleryPage onLogout={() => navigate("/login")} />;
+  }
+
+  if (path === "/admin/login") {
+    return (
+      <AdminLogin
+        onLoginSuccess={() => navigate("/admin")}
+        onBackToClientLogin={() => navigate("/login")}
+      />
+    );
+  }
+
+  if (path === "/admin") {
+    return <Admin onLogout={() => navigate("/admin/login")} />;
   }
 
   return (
     <Login
       onLoginSuccess={() => navigate("/gallery")}
       onSignup={() => navigate("/signup")}
+      onAdminLogin={() => navigate("/admin/login")}
       accountCreated={accountCreated}
       onAccountCreatedAlert={() => setAccountCreated(false)}
     />

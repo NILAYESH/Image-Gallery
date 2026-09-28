@@ -1,3 +1,4 @@
+// ImageCard: renders one gallery item, supporting favorite toggling and video/image display for each card.
 function HeartIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -6,11 +7,22 @@ function HeartIcon() {
   );
 }
 
-function ImageCard({ item, onToggleFavorite }) {
+function ImageCard({ item, onToggleFavorite, onDeleteMedia }) {
   return (
     <article className={`photo-card ${item.favorite ? "is-favorite" : ""}`}>
       <div className={`image-frame ${item.size || "landscape"}`}>
-        <img src={item.src} alt={item.alt} loading="lazy" />
+        {item.mediaType === "video" ? (
+          <video
+            src={item.src}
+            aria-label={item.title}
+            controls
+            defaultMuted
+            preload="metadata"
+            playsInline
+          />
+        ) : (
+          <img src={item.src} alt={item.alt} loading="lazy" />
+        )}
 
         <div className="card-overlay">
           <button
@@ -25,6 +37,15 @@ function ImageCard({ item, onToggleFavorite }) {
             aria-pressed={item.favorite}
           >
             <HeartIcon />
+          </button>
+
+          <button
+            className="delete-media-button"
+            type="button"
+            onClick={() => onDeleteMedia(item.id, item.title)}
+            aria-label={`Delete ${item.title}`}
+          >
+            Delete
           </button>
         </div>
       </div>
