@@ -2,16 +2,48 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
 
+const AUTH_COOKIE_NAME = "authToken";
+const AUTH_COOKIE_MAX_AGE = 24 * 60 * 60 * 1000;
+
+const getAuthCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/",
+});
+
+const getPublicUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+});
+
 // Register a new user
 const signup = async (req, res) => {
   try {
     const { name, email, password, confirmPassword } = req.body;
 
-    // Check required fields
-    if (!name || !email || !password || !confirmPassword) {
+    if (
+      typeof name !== "string" ||
+      !name.trim() ||
+      typeof email !== "string" ||
+      !email.trim() ||
+      typeof password !== "string" ||
+      !password ||
+      typeof confirmPassword !== "string" ||
+      !confirmPassword
+    ) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
+      });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address",
       });
     }
 
@@ -57,6 +89,13 @@ const signup = async (req, res) => {
       },
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "Email is already registered",
+      });
+    }
+
     console.error("Signup error:", error);
 
     return res.status(500).json({
@@ -71,11 +110,17 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check required fields
-    if (!email || !password) {
+    if (typeof email !== "string" || !email.trim() || typeof password !== "string" || !password) {
       return res.status(400).json({
         success: false,
         message: "Email and password are required",
+      });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address",
       });
     }
 
@@ -85,7 +130,7 @@ const login = async (req, res) => {
     });
 
     // Generic message for invalid credentials
-    if (!user) {
+    if (!user || user.role !== "user") {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
@@ -108,16 +153,15 @@ const login = async (req, res) => {
     // Generate JWT
     const token = generateToken(user);
 
+    res.cookie(AUTH_COOKIE_NAME, token, {
+      ...getAuthCookieOptions(),
+      maxAge: AUTH_COOKIE_MAX_AGE,
+    });
+
     return res.status(200).json({
       success: true,
       message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: getPublicUser(user),
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -129,7 +173,24 @@ const login = async (req, res) => {
   }
 };
 
+const getCurrentUser = (req, res) => {
+  return res.status(200).json({
+    success: true,
+    user: getPublicUser(req.user),
+  });
+};
+
+const logout = (req, res) => {
+  res.clearCookie(AUTH_COOKIE_NAME, getAuthCookieOptions());
+  return res.status(200).json({
+    success: true,
+    message: "Logged out successfully",
+  });
+};
+
 module.exports = {
   signup,
   login,
+  getCurrentUser,
+  logout,
 };

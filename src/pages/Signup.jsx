@@ -1,21 +1,38 @@
 // Signup: client account creation screen that keeps the original sign-up flow separate from the admin flow.
 import { useState } from "react";
 import { EyeIcon } from "./Login";
+import { signup } from "../services/authService";
 
 function Signup({ onLogin, onAccountCreated }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
+    if (isSubmitting) return;
 
     const formData = new FormData(event.currentTarget);
     if (formData.get("password") !== formData.get("confirmPassword")) {
-      window.alert("Password and confirm password do not match.");
+      setError("Passwords do not match.");
       return;
     }
 
-    onAccountCreated();
+    setError("");
+    setIsSubmitting(true);
+    try {
+      await signup({
+        name: formData.get("name"),
+        email: formData.get("email"),
+        password: formData.get("password"),
+        confirmPassword: formData.get("confirmPassword"),
+      });
+      onAccountCreated();
+    } catch (requestError) {
+      setError(requestError.message);
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -116,8 +133,18 @@ function Signup({ onLogin, onAccountCreated }) {
             </div>
           </div>
 
-          <button className="login-submit" type="submit">
-            Create Account
+          {error && (
+            <p className="login-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button
+            className="login-submit"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Creating account..." : "Create Account"}
           </button>
         </form>
 

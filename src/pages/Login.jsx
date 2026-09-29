@@ -1,5 +1,6 @@
 // Login: client authentication screen for returning users, with validation, password toggle, and client-login flow.
 import { useEffect, useRef, useState } from "react";
+import { login } from "../services/authService";
 
 function EyeIcon({ hidden }) {
   return hidden ? (
@@ -19,6 +20,7 @@ function Login({
   onAdminLogin,
   accountCreated,
   onAccountCreatedAlert,
+  sessionError,
 }) {
   const [identity, setIdentity] = useState("");
   const [password, setPassword] = useState("");
@@ -28,6 +30,12 @@ function Login({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const accountCreatedAlertShown = useRef(false);
   const rememberMeAlertShown = useRef(false);
+
+  useEffect(() => {
+    if (sessionError) {
+      setErrors((current) => ({ ...current, credentials: sessionError }));
+    }
+  }, [sessionError]);
 
   useEffect(() => {
     if (!accountCreated || accountCreatedAlertShown.current) return;
@@ -41,7 +49,9 @@ function Login({
     const nextErrors = {};
 
     if (!identity.trim()) {
-      nextErrors.identity = "Please enter your email or username.";
+      nextErrors.identity = "Please enter your email.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity.trim())) {
+      nextErrors.identity = "Please enter a valid email address.";
     }
 
     if (!password) {
@@ -51,7 +61,7 @@ function Login({
     return nextErrors;
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     if (isSubmitting) return;
 
@@ -63,16 +73,19 @@ function Login({
     }
 
     setIsSubmitting(true);
-    // DEMO credentials only: this page does not provide secure authentication.
-    window.setTimeout(() => {
-      if (identity.trim().toLowerCase() === "student" && password === "123456") {
-        onLoginSuccess();
-        return;
-      }
-
-      setErrors({ credentials: "Invalid username or password." });
+    try {
+      const result = await login({
+        email: identity.trim(),
+        password,
+      });
+      onLoginSuccess(result.user);
+    } catch (error) {
+      setErrors((current) => ({
+        ...current,
+        credentials: error.message,
+      }));
       setIsSubmitting(false);
-    }, 350);
+    }
   }
 
   function handleIdentityChange(event) {
@@ -127,15 +140,15 @@ function Login({
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>
           <div className="login-field">
-            <label htmlFor="identity">Email or Username</label>
+            <label htmlFor="identity">Email</label>
             <input
               id="identity"
               name="identity"
-              type="text"
+              type="email"
               value={identity}
               onChange={handleIdentityChange}
-              placeholder="Enter your email or username"
-              autoComplete="username"
+              placeholder="Enter your email"
+              autoComplete="email"
               aria-invalid={Boolean(errors.identity)}
               aria-describedby={errors.identity ? "identity-error" : undefined}
             />

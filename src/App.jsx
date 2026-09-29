@@ -1,6 +1,10 @@
 // App route shell: decides which page to render for the current URL and preserves the client/gallery flow.
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
+import {
+  getCurrentUser,
+  logout as logoutRequest,
+} from "./services/authService";
 import Navbar from "./components/Navbar";
 import Gallery from "./components/Gallery";
 import Login from "./pages/Login";
@@ -125,7 +129,7 @@ function groupItemsBySection(items) {
   }, []);
 }
 
-function GalleryPage({ onLogout }) {
+function GalleryPage({ onLogout, currentUser, logoutError }) {
   const [galleryItems, setGalleryItems] = useState(initialGalleryItems);
   const [showFavorites, setShowFavorites] = useState(false);
   const [mediaToDelete, setMediaToDelete] = useState(null);
@@ -244,7 +248,14 @@ function GalleryPage({ onLogout }) {
         onFavoritesToggle={() => setShowFavorites((current) => !current)}
         favoriteCount={favoriteCount}
         onLogout={onLogout}
+        currentUser={currentUser}
       />
+
+      {logoutError && (
+        <p className="login-error" role="alert">
+          {logoutError}
+        </p>
+      )}
 
       <main className="gallery-dashboard">
         <section className="library-header" aria-labelledby="gallery-title">
@@ -339,6 +350,37 @@ function GalleryPage({ onLogout }) {
 function App() {
   const [path, setPath] = useState(() => window.location.pathname);
   const [accountCreated, setAccountCreated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sessionError, setSessionError] = useState("");
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function restoreSession() {
+      try {
+        const user = await getCurrentUser();
+        if (isActive && user) {
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        if (isActive) {
+          setSessionError(error.message);
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    restoreSession();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     function handlePopState() {
@@ -349,19 +391,43 @@ function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  useEffect(() => {
+    if (!isLoading && path === "/gallery" && !isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, isLoading, path]);
+
   function navigate(nextPath) {
     window.history.pushState({}, "", nextPath);
     setPath(nextPath);
   }
 
+  async function handleLogout() {
+    try {
+      await logoutRequest();
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      setSessionError("");
+      navigate("/login");
+    } catch (error) {
+      setSessionError(error.message);
+    }
+  }
+
   if (path === "/" || path === "/login") {
     return (
       <Login
-        onLoginSuccess={() => navigate("/gallery")}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+          setSessionError("");
+          navigate("/gallery");
+        }}
         onSignup={() => navigate("/signup")}
         onAdminLogin={() => navigate("/admin/login")}
         accountCreated={accountCreated}
         onAccountCreatedAlert={() => setAccountCreated(false)}
+        sessionError={sessionError}
       />
     );
   }
@@ -379,7 +445,19 @@ function App() {
   }
 
   if (path === "/gallery") {
-    return <GalleryPage onLogout={() => navigate("/login")} />;
+    if (isLoading) {
+      return <main aria-live="polite">Loading...</main>;
+    }
+    if (!isAuthenticated) {
+      return null;
+    }
+    return (
+      <GalleryPage
+        onLogout={handleLogout}
+        currentUser={currentUser}
+        logoutError={sessionError}
+      />
+    );
   }
 
   if (path === "/admin/login") {
@@ -397,11 +475,17 @@ function App() {
 
   return (
     <Login
-      onLoginSuccess={() => navigate("/gallery")}
+      onLoginSuccess={(user) => {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        setSessionError("");
+        navigate("/gallery");
+      }}
       onSignup={() => navigate("/signup")}
       onAdminLogin={() => navigate("/admin/login")}
       accountCreated={accountCreated}
       onAccountCreatedAlert={() => setAccountCreated(false)}
+      sessionError={sessionError}
     />
   );
 }

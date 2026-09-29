@@ -15,6 +15,7 @@ function Navbar({
   onFavoritesToggle,
   favoriteCount,
   onLogout,
+  currentUser,
   adminMode = false,
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
@@ -96,7 +97,9 @@ function Navbar({
           {profileOpen && (
             <div className="profile-dropdown" id="profile-dropdown">
               <p className="profile-greeting">
-                {adminMode ? "Admin" : "Hello, CYRUS"}
+                {adminMode
+                  ? "Admin"
+                  : `Hello, ${currentUser?.name || "CYRUS"}`}
               </p>
               <button
                 className="profile-logout"
