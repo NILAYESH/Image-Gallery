@@ -7,7 +7,12 @@ function HeartIcon() {
   );
 }
 
-function ImageCard({ item, onToggleFavorite, onDeleteMedia }) {
+function ImageCard({
+  item,
+  onToggleFavorite,
+  onDeleteMedia,
+  isFavoriteUpdating,
+}) {
   return (
     <article className={`photo-card ${item.favorite ? "is-favorite" : ""}`}>
       <div className={`image-frame ${item.size || "landscape"}`}>
@@ -29,6 +34,7 @@ function ImageCard({ item, onToggleFavorite, onDeleteMedia }) {
             className="favorite-button"
             type="button"
             onClick={() => onToggleFavorite(item.id)}
+            disabled={isFavoriteUpdating}
             aria-label={
               item.favorite
                 ? `Remove ${item.title} from favorites`
@@ -51,7 +57,13 @@ function ImageCard({ item, onToggleFavorite, onDeleteMedia }) {
       </div>
 
       <div className="card-body">
-        <p>Captured {item.time}</p>
+        <div className="card-details">
+          <strong className="card-title">{item.title}</strong>
+          <span className="card-category">
+            {item.category} · {item.displaySize}
+          </span>
+          <p>Captured {item.time}</p>
+        </div>
         <span className="card-dot" aria-hidden="true" />
       </div>
     </article>

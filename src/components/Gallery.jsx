@@ -1,8 +1,53 @@
 // Gallery: groups and renders the collection of media cards by date/section for the main library view.
 import ImageCard from "./ImageCard";
 
-function Gallery({ groupedGallery, onToggleFavorite, onClearFilters, onDeleteMedia }) {
+function Gallery({
+  groupedGallery,
+  onToggleFavorite,
+  pendingFavoriteIds,
+  onClearFilters,
+  onDeleteMedia,
+  isLoading,
+  error,
+  hasMedia,
+  onRetry,
+  onAddMedia,
+}) {
+  if (isLoading) {
+    return (
+      <section className="empty-state" aria-live="polite">
+        <p>Loading your gallery...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="empty-state" aria-live="polite">
+        <p className="eyebrow">Something went wrong</p>
+        <h2>Could not load your media</h2>
+        <p>{error}</p>
+        <button type="button" onClick={onRetry}>
+          Try again
+        </button>
+      </section>
+    );
+  }
+
   if (groupedGallery.length === 0) {
+    if (!hasMedia) {
+      return (
+        <section className="empty-state" aria-live="polite">
+          <p className="eyebrow">Your Personal Library</p>
+          <h2>Your gallery is empty</h2>
+          <p>Upload a photo or video to start your collection.</p>
+          <button type="button" onClick={onAddMedia}>
+            Add media
+          </button>
+        </section>
+      );
+    }
+
     return (
       <section className="empty-state" aria-live="polite">
         <p className="eyebrow">No Matches</p>
@@ -44,6 +89,7 @@ function Gallery({ groupedGallery, onToggleFavorite, onClearFilters, onDeleteMed
                     item={item}
                     onToggleFavorite={onToggleFavorite}
                     onDeleteMedia={onDeleteMedia}
+                    isFavoriteUpdating={pendingFavoriteIds.has(item.id)}
                   />
                 ))}
               </div>

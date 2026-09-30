@@ -566,6 +566,25 @@
   line-height: 1.2;
 }
 
+.card-details {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.card-title {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-category {
+  color: var(--muted-strong);
+  font-size: 0.7rem;
+}
+
 .card-dot {
   width: 8px;
   height: 8px;
@@ -1509,6 +1528,55 @@
 
 .admin-confirm-delete-button:hover {
   filter: brightness(0.92);
+}
+
+.upload-modal-form {
+  display: grid;
+  gap: 14px;
+}
+
+.upload-modal-field {
+  display: grid;
+  gap: 7px;
+  color: var(--muted-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.upload-modal-field input,
+.upload-modal-field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  color: var(--text-strong);
+  background: var(--surface-raised);
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.upload-modal-field input[type="file"] {
+  padding: 7px;
+}
+
+.upload-modal-field input:focus-visible,
+.upload-modal-field select:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.upload-modal-error {
+  margin: 0;
+  color: #ff9eae;
+  font-size: 0.84rem;
+}
+
+.upload-submit-button:disabled,
+.admin-cancel-button:disabled,
+.admin-confirm-delete-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 @media (max-width: 720px) {

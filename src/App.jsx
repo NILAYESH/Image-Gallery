@@ -1,85 +1,28 @@
 // App route shell: decides which page to render for the current URL and preserves the client/gallery flow.
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import "./App.css";
 import {
   getCurrentUser,
   logout as logoutRequest,
 } from "./services/authService";
+import {
+  deleteMedia,
+  getMedia,
+  toggleFavorite,
+} from "./services/mediaService";
 import Navbar from "./components/Navbar";
 import Gallery from "./components/Gallery";
+import UploadModal from "./components/UploadModal";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AdminLogin from "./pages/AdminLogin";
 import Admin from "./pages/Admin";
-
-const initialGalleryItems = [
-  {
-    id: 1,
-    title: "Mountain Morning",
-    date: "Thu, Jul 30",
-    time: "7:58 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
-    alt: "Cabin and mountains in warm morning light",
-    favorite: true,
-    size: "wide",
-  },
-  {
-    id: 2,
-    title: "Forest Walk",
-    date: "Thu, Jul 30",
-    time: "8:24 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=900&q=80",
-    alt: "Green forest trail with tall trees",
-    favorite: false,
-    size: "tall",
-  },
-  {
-    id: 3,
-    title: "Kyoto Evening",
-    date: "Tue, Jul 28",
-    time: "6:12 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=900&q=80",
-    alt: "Traditional street in Kyoto at evening",
-    favorite: true,
-    size: "portrait",
-  },
-  {
-    id: 4,
-    title: "Coastal Highway",
-    date: "Tue, Jul 28",
-    time: "5:47 PM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80",
-    alt: "Open road beside a dramatic coastline",
-    favorite: false,
-    size: "wide",
-  },
-  {
-    id: 5,
-    title: "Brunch Table",
-    date: "Sun, Jul 19",
-    time: "11:18 AM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=80",
-    alt: "Colorful brunch plates arranged on a table",
-    favorite: false,
-    size: "landscape",
-  },
-  {
-    id: 6,
-    title: "Coffee Notes",
-    date: "Sun, Jul 19",
-    time: "9:36 AM",
-    section: "July",
-    src: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=900&q=80",
-    alt: "Cup of coffee beside handwritten notes",
-    favorite: true,
-    size: "square",
-  },
-];
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
@@ -89,6 +32,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 
 const monthFormatter = new Intl.DateTimeFormat("en-US", {
   month: "long",
+  year: "numeric",
 });
 
 const timeFormatter = new Intl.DateTimeFormat("en-US", {
@@ -96,16 +40,33 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-function toTitleCase(value) {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => word[0].toUpperCase() + word.slice(1))
-    .join(" ");
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-function cleanFileName(fileName) {
-  return fileName.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
+function mapMedia(media) {
+  const createdAt = new Date(media.createdAt);
+  const title = media.title || media.fileName;
+
+  return {
+    id: media.id,
+    title,
+    category: media.category,
+    date: dateFormatter.format(createdAt),
+    time: timeFormatter.format(createdAt),
+    section: monthFormatter.format(createdAt),
+    src: media.fileUrl,
+    alt: title,
+    mediaType: media.type,
+    favorite: media.favorite,
+    size: "landscape",
+    displaySize: formatFileSize(media.fileSize),
+  };
 }
 
 function groupItemsBySection(items) {
@@ -129,12 +90,51 @@ function groupItemsBySection(items) {
   }, []);
 }
 
-function GalleryPage({ onLogout, currentUser, logoutError }) {
-  const [galleryItems, setGalleryItems] = useState(initialGalleryItems);
+function GalleryPage({ onLogout, currentUser, logoutError, onSessionExpired }) {
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [isMediaLoading, setIsMediaLoading] = useState(true);
+  const [galleryError, setGalleryError] = useState("");
+  const [mediaNotice, setMediaNotice] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [mediaToDelete, setMediaToDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [pendingFavoriteIds, setPendingFavoriteIds] = useState(() => new Set());
   const cancelDeleteRef = useRef(null);
-  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadMedia() {
+      setIsMediaLoading(true);
+      setGalleryError("");
+      try {
+        const media = await getMedia();
+        if (isActive) {
+          setGalleryItems(media.map(mapMedia));
+        }
+      } catch (error) {
+        if (error.status === 401) {
+          onSessionExpired();
+          return;
+        }
+        if (isActive) {
+          setGalleryError(error.message);
+        }
+      } finally {
+        if (isActive) {
+          setIsMediaLoading(false);
+        }
+      }
+    }
+
+    loadMedia();
+    return () => {
+      isActive = false;
+    };
+  }, [onSessionExpired, reloadKey]);
 
   const favoriteCount = useMemo(
     () => galleryItems.filter((item) => item.favorite).length,
@@ -167,83 +167,72 @@ function GalleryPage({ onLogout, currentUser, logoutError }) {
     [filteredItems],
   );
 
-  function handleToggleFavorite(photoId) {
-    setGalleryItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === photoId ? { ...item, favorite: !item.favorite } : item,
-      ),
-    );
+  async function handleToggleFavorite(photoId) {
+    if (pendingFavoriteIds.has(photoId)) return;
+
+    setPendingFavoriteIds((current) => new Set(current).add(photoId));
+    setMediaNotice("");
+    try {
+      const result = await toggleFavorite(photoId);
+      const updatedItem = mapMedia(result.media);
+      setGalleryItems((currentItems) =>
+        currentItems.map((item) => (item.id === photoId ? updatedItem : item)),
+      );
+    } catch (error) {
+      if (error.status === 401) {
+        onSessionExpired();
+      } else {
+        setMediaNotice(error.message);
+      }
+    } finally {
+      setPendingFavoriteIds((current) => {
+        const next = new Set(current);
+        next.delete(photoId);
+        return next;
+      });
+    }
   }
 
   function handleClearFilters() {
     setShowFavorites(false);
   }
 
-  function confirmDeleteMedia() {
+  async function confirmDeleteMedia() {
     if (!mediaToDelete) return;
 
-    setGalleryItems((currentItems) =>
-      currentItems.filter((item) => item.id !== mediaToDelete.id),
-    );
-    setMediaToDelete(null);
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteMedia(mediaToDelete.id);
+      setGalleryItems((currentItems) =>
+        currentItems.filter((item) => item.id !== mediaToDelete.id),
+      );
+      setMediaToDelete(null);
+    } catch (error) {
+      if (error.status === 401) {
+        onSessionExpired();
+      } else {
+        setDeleteError(error.message);
+      }
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   function handleDeleteMedia(mediaId, mediaTitle) {
     setMediaToDelete({ id: mediaId, title: mediaTitle });
+    setDeleteError("");
   }
 
-  function handleOpenFilePicker() {
-    fileInputRef.current?.click();
-  }
-
-  function handleUploadFiles(fileList) {
-    const files = Array.from(fileList).filter((file) =>
-      file.type.startsWith("image/") || file.type.startsWith("video/"),
-    );
-
-    if (files.length === 0) {
-      return;
-    }
-
-    const now = new Date();
-    const dateLabel = dateFormatter.format(now);
-    const monthLabel = monthFormatter.format(now);
-    const timeLabel = timeFormatter.format(now);
-
-    setGalleryItems((currentItems) => {
-      const newItems = files.map((file, index) => {
-        const mediaType = file.type.startsWith("video/") ? "video" : "image";
-        const fallbackTitle = toTitleCase(
-          cleanFileName(file.name) || `Uploaded ${mediaType}`,
-        );
-
-        return {
-          id: Date.now() + index + currentItems.length + 1,
-          title: fallbackTitle,
-          date: dateLabel,
-          time: timeLabel,
-          section: monthLabel,
-          src: URL.createObjectURL(file),
-          alt: fallbackTitle,
-          mediaType,
-          favorite: false,
-          size: "landscape",
-        };
-      });
-
-      return [...newItems, ...currentItems];
-    });
-  }
-
-  function handleFileChange(event) {
-    handleUploadFiles(event.target.files);
-    event.target.value = "";
+  function handleUploadSuccess(media) {
+    setGalleryItems((currentItems) => [mapMedia(media), ...currentItems]);
+    setIsUploadOpen(false);
   }
 
   return (
     <div className="app-shell">
       <Navbar
-        onAddClick={handleOpenFilePicker}
+        onAddClick={() => setIsUploadOpen(true)}
         showFavorites={showFavorites}
         onFavoritesToggle={() => setShowFavorites((current) => !current)}
         favoriteCount={favoriteCount}
@@ -251,9 +240,9 @@ function GalleryPage({ onLogout, currentUser, logoutError }) {
         currentUser={currentUser}
       />
 
-      {logoutError && (
+      {(logoutError || mediaNotice) && (
         <p className="login-error" role="alert">
-          {logoutError}
+          {logoutError || mediaNotice}
         </p>
       )}
 
@@ -263,8 +252,7 @@ function GalleryPage({ onLogout, currentUser, logoutError }) {
             <p className="eyebrow">Personal Library</p>
             <h1 id="gallery-title">Photo Gallery</h1>
             <p className="library-summary">
-              Recent trips, meals, notes, and everyday moments in one calm
-              library.
+              Your photos and videos, all in one place.
             </p>
           </div>
 
@@ -287,8 +275,14 @@ function GalleryPage({ onLogout, currentUser, logoutError }) {
         <Gallery
           groupedGallery={groupedGallery}
           onToggleFavorite={handleToggleFavorite}
+          pendingFavoriteIds={pendingFavoriteIds}
           onClearFilters={handleClearFilters}
           onDeleteMedia={handleDeleteMedia}
+          isLoading={isMediaLoading}
+          error={galleryError}
+          hasMedia={galleryItems.length > 0}
+          onRetry={() => setReloadKey((current) => current + 1)}
+          onAddMedia={() => setIsUploadOpen(true)}
         />
       </main>
 
@@ -316,6 +310,7 @@ function GalleryPage({ onLogout, currentUser, logoutError }) {
                 className="admin-cancel-button"
                 type="button"
                 onClick={() => setMediaToDelete(null)}
+                disabled={isDeleting}
               >
                 Cancel
               </button>
@@ -323,22 +318,27 @@ function GalleryPage({ onLogout, currentUser, logoutError }) {
                 className="admin-confirm-delete-button"
                 type="button"
                 onClick={confirmDeleteMedia}
+                disabled={isDeleting}
               >
-                Delete
+                {isDeleting ? "Deleting..." : "Delete"}
               </button>
             </div>
+            {deleteError && (
+              <p className="upload-modal-error" role="alert">
+                {deleteError}
+              </p>
+            )}
           </section>
         </div>
       )}
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,video/*"
-        multiple
-        hidden
-        onChange={handleFileChange}
-      />
+      {isUploadOpen && (
+        <UploadModal
+          onClose={() => setIsUploadOpen(false)}
+          onUploadSuccess={handleUploadSuccess}
+          onSessionExpired={onSessionExpired}
+        />
+      )}
 
       <footer className="site-footer">
         <p>(c) 2026 Photo Gallery. Student React project.</p>
@@ -355,13 +355,27 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionError, setSessionError] = useState("");
 
+  const navigate = useCallback((nextPath) => {
+    window.history.pushState({}, "", nextPath);
+    setPath(nextPath);
+  }, []);
+
+  const handleSessionExpired = useCallback(() => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    window.history.replaceState({}, "", "/login");
+    setPath("/login");
+  }, []);
+
   useEffect(() => {
     let isActive = true;
+    let hasRestoredSession = false;
 
     async function restoreSession() {
       try {
         const user = await getCurrentUser();
         if (isActive && user) {
+          hasRestoredSession = true;
           setCurrentUser(user);
           setIsAuthenticated(true);
         }
@@ -372,6 +386,12 @@ function App() {
       } finally {
         if (isActive) {
           setIsLoading(false);
+          if (
+            !hasRestoredSession &&
+            window.location.pathname === "/gallery"
+          ) {
+            navigate("/login");
+          }
         }
       }
     }
@@ -380,27 +400,22 @@ function App() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     function handlePopState() {
-      setPath(window.location.pathname);
+      const nextPath = window.location.pathname;
+      if (nextPath === "/gallery" && !isLoading && !isAuthenticated) {
+        window.history.replaceState({}, "", "/login");
+        setPath("/login");
+        return;
+      }
+      setPath(nextPath);
     }
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoading && path === "/gallery" && !isAuthenticated) {
-      navigate("/login");
-    }
-  }, [isAuthenticated, isLoading, path]);
-
-  function navigate(nextPath) {
-    window.history.pushState({}, "", nextPath);
-    setPath(nextPath);
-  }
+  }, [isAuthenticated, isLoading]);
 
   async function handleLogout() {
     try {
@@ -456,6 +471,7 @@ function App() {
         onLogout={handleLogout}
         currentUser={currentUser}
         logoutError={sessionError}
+        onSessionExpired={handleSessionExpired}
       />
     );
   }
